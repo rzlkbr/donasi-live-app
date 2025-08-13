@@ -518,8 +518,7 @@ Thanks to these wonderful people ([emoji key](https://allcontributors.org/docs/e
 <table>
   <tbody>
     <tr>
-      <td align="center"><a href="https://github.com/username1"><img src="https://avatars.githubusercontent.com/u/12345?v=4" width="100px;" alt=""/><br /><sub><b>Nama Developer 1</b></sub></a><br /><a href="https://github.com/username/donation-app/commits?author=username1" title="Code">💻</a> <a href="#design-username1" title="Design">🎨</a></td>
-      <td align="center"><a href="https://github.com/username2"><img src="https://avatars.githubusercontent.com/u/67890?v=4" width="100px;" alt=""/><br /><sub><b>Nama Developer 2</b></sub></a><br /><a href="https://github.com/username/donation-app/commits?author=username2" title="Code">💻</a> <a href="#maintenance-username2" title="Maintenance">🚧</a></td>
+      <td align="center"><a href="https://github.com/rzlkbr"><img src="https://avatars.githubusercontent.com/u/12345?v=4" width="100px;" alt=""/><br /><sub><b>Nama Developer 1</b></sub></a><br /><a href="https://github.com/username/donation-app/commits?author=rzlkb" title="Code">💻</a> <a href="#design-username1" title="Design">🎨</a></td>
     </tr>
   </tbody>
 </table>
@@ -557,3 +556,4 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 **Dibuat dengan ❤️ untuk transparansi donasi di Kalimantan Timur**
 
 </div>
+

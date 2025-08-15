@@ -1,11 +1,14 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #013220;
+  --foreground: #ededed;
 }
 
-@theme inline {
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -14,13 +17,141 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #013220;
     --foreground: #ededed;
   }
 }
 
 body {
-  background: var(--background);
+  font-family: 'Inter', sans-serif;
+  background-color: #013220;
+  background-image: url('/pattern-bg.svg');
+  background-size: 200px 200px;
+  background-repeat: repeat;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* Skeuomorphic Panel Styles */
+.panel {
+  background: linear-gradient(145deg, #024b30, #013220);
+  border: 2px solid #FFD700;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 5px 5px 15px rgba(0,0,0,0.5), -5px -5px 15px rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+}
+
+/* Skeuomorphic Button Styles */
+.btn-skeuo {
+  font-weight: 700;
+  color: #E0C78F;
+  background: linear-gradient(145deg, #FFD700, #DAA520);
+  border: 1px solid #FFD700;
+  border-radius: 0.75rem;
+  box-shadow: -5px -5px 10px rgba(255, 215, 0, 0.2), 5px 5px 10px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(0,0,0,0.3), inset 2px 2px 5px rgba(255,255,255,0.2);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-skeuo:hover {
+  transform: translateY(-2px);
+  box-shadow: -7px -7px 12px rgba(255, 215, 0, 0.25), 7px 7px 12px rgba(0, 0, 0, 0.35), inset -2px -2px 5px rgba(0,0,0,0.3), inset 2px 2px 5px rgba(255,255,255,0.2);
+}
+
+.btn-skeuo:active {
+  transform: translateY(1px);
+  box-shadow: -2px -2px 5px rgba(255, 215, 0, 0.2), 2px 2px 5px rgba(0, 0, 0, 0.3), inset -3px -3px 8px rgba(0,0,0,0.4), inset 3px 3px 8px rgba(255,255,255,0.1);
+}
+
+/* Input Styles */
+.input-inset {
+  background-color: rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,0,0,0.4);
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
+  border-radius: 0.5rem;
+  color: #FFF;
+}
+
+.input-inset::placeholder {
+  color: rgba(255,255,255,0.4);
+}
+
+/* Total Amount Styling */
+.total-amount-font {
+  font-weight: 700;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+}
+
+/* Progress Bar Styles */
+.progress-container {
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 9999px;
+  padding: 0.25rem;
+  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.6);
+}
+
+.progress-bar {
+  background: linear-gradient(to right, #ffd700, #f0c000);
+  box-shadow: 0 0 10px #ffd700, 0 0 5px #fff;
+  transition: width 1s ease-out;
+  border-radius: 9999px;
+  height: 100%;
+}
+
+/* Animation Classes */
+@keyframes fadeInSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.new-donation-animation {
+  animation: fadeInSlideDown 0.7s ease-out forwards;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+}
+
+/* Festivity Canvas */
+#festivity-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+}
+
+/* Button Variants */
+.btn-nominal {
+  background: linear-gradient(145deg, #025a3a, #01432a);
+  border: 1px solid #FFD700;
+}
+
+.btn-clear {
+  background: linear-gradient(145deg, #6e2a2a, #501e1e);
+  border: 1px solid #ff7b7b;
 }

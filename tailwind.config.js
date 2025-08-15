@@ -1,26 +1,21 @@
-// File: tailwind.config.ts
-// import { Config } from 'tailwindcss' // Removed TypeScript-only import
-
 const config = {
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       fontFamily: {
-        // Definisikan font custom kita
-        heading: ['var(--font-amiri)'],
-        sans: ['var(--font-poppins)'],
+        heading: ['Amiri', 'serif'],
+        sans: ['Poppins', 'sans-serif'],
       },
       colors: {
-        // Definisikan warna primer dan sekunder sesuai PRD
-        primary: '#2ECC71', // Emerald
-        secondary: '#D4AF37', // Gold
-      }
+        primary: '#2ECC71',
+        secondary: '#D4AF37',
+      },
     },
   },
   plugins: [],
 }
-export default config
+module.exports = config

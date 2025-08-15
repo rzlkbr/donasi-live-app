@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from 'D:/Repositories/work_repo/donasi_app/v.1/donasi-live-app/firebase/config';
+import { db, auth } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 
 // Definisikan tipe data untuk group agar lebih rapi dengan TypeScript
@@ -19,17 +19,33 @@ export default function DashboardPage() {
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [showAddGroup, setShowAddGroup] = useState(false);
   const router = useRouter();
 
   // 1. Ambil data semua kelompok dari Firestore saat halaman dimuat
   useEffect(() => {
     const fetchGroups = async () => {
-      const querySnapshot = await getDocs(collection(db, 'groups'));
-      const groupsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,
-      }));
-      setGroups(groupsData);
+      try {
+        console.log('Fetching groups from Firestore...');
+        const querySnapshot = await getDocs(collection(db, 'groups'));
+        console.log('Groups query result:', querySnapshot.size, 'documents');
+        
+        const groupsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+        }));
+        console.log('Groups data:', groupsData);
+        setGroups(groupsData);
+        
+        if (groupsData.length === 0) {
+           setMessage('Peringatan: Belum ada kelompok yang tersedia. Silakan tambahkan kelompok terlebih dahulu.');
+           setShowAddGroup(true);
+         }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+        setMessage('Error: Gagal memuat data kelompok.');
+      }
     };
     fetchGroups();
   }, []);
@@ -37,13 +53,21 @@ export default function DashboardPage() {
   // 2. Fungsi untuk handle submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Form submitted with:', { selectedGroup, amount, notes });
+    
     if (!selectedGroup || !amount) {
       setMessage('Error: Kelompok dan Nominal wajib diisi.');
       return;
     }
 
+    if (Number(amount) <= 0) {
+      setMessage('Error: Nominal donasi harus lebih dari 0.');
+      return;
+    }
+
     // Konfirmasi sebelum menyimpan
-    if (!confirm(`Anda yakin ingin menambahkan donasi Rp ${amount} ke kelompok yang dipilih?`)) {
+    if (!confirm(`Anda yakin ingin menambahkan donasi Rp ${Number(amount).toLocaleString('id-ID')} ke kelompok yang dipilih?`)) {
         return;
     }
 
@@ -52,27 +76,83 @@ export default function DashboardPage() {
 
     try {
       const user = auth.currentUser;
+      console.log('Current user:', user?.email);
+      
       if (!user) {
-        throw new Error("Admin tidak terautentikasi.");
+        throw new Error("Admin tidak terautentikasi. Silakan login kembali.");
       }
-      // 3. Tambahkan dokumen baru ke collection 'donations'
-      await addDoc(collection(db, 'donations'), {
+      
+      const donationData = {
         groupId: selectedGroup,
         amount: Number(amount),
-        notes: notes,
-        createdAt: serverTimestamp(), // Timestamp dari server Firebase
-        createdBy: user.uid, // Simpan ID admin yang input
-        createdByEmail: user.email // Simpan email admin
-      });
-
-      setMessage('Sukses! Donasi berhasil ditambahkan.');
+        notes: notes || '',
+        createdAt: serverTimestamp(),
+        createdBy: user.uid,
+        createdByEmail: user.email
+      };
+      
+      console.log('Adding donation:', donationData);
+      
+      // 3. Tambahkan dokumen baru ke collection 'donations'
+      const docRef = await addDoc(collection(db, 'donations'), donationData);
+      
+      console.log('Donation added with ID:', docRef.id);
+      setMessage(`Sukses! Donasi Rp ${Number(amount).toLocaleString('id-ID')} berhasil ditambahkan.`);
+      
       // Reset form
       setSelectedGroup('');
       setAmount('');
       setNotes('');
     } catch (error) {
-      console.error("Error adding document: ", error);
-      setMessage('Gagal menambahkan donasi. Silakan coba lagi.');
+      console.error("Error adding donation: ", error);
+      setMessage(`Gagal menambahkan donasi: ${error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fungsi untuk menambah kelompok baru
+  const handleAddGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newGroupName.trim()) {
+      setMessage('Error: Nama kelompok tidak boleh kosong.');
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Admin tidak terautentikasi. Silakan login kembali.");
+      }
+      
+      const groupData = {
+        name: newGroupName.trim(),
+        createdAt: serverTimestamp(),
+        createdBy: user.uid,
+        createdByEmail: user.email
+      };
+      
+      console.log('Adding group:', groupData);
+      
+      const docRef = await addDoc(collection(db, 'groups'), groupData);
+      
+      console.log('Group added with ID:', docRef.id);
+      
+      // Update local state
+      const newGroup = { id: docRef.id, name: newGroupName.trim() };
+      setGroups(prev => [...prev, newGroup]);
+      
+      setMessage(`Sukses! Kelompok "${newGroupName.trim()}" berhasil ditambahkan.`);
+      setNewGroupName('');
+      setShowAddGroup(false);
+      
+    } catch (error) {
+      console.error("Error adding group: ", error);
+      setMessage(`Gagal menambahkan kelompok: ${error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal'}`);
     } finally {
       setIsLoading(false);
     }
@@ -86,76 +166,125 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg">
-        <div className="p-6 sm:p-8 flex justify-between items-center border-b">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+        <div className="panel p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-yellow-300">Dashboard Admin</h1>
             <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+              onClick={handleLogout}
+              className="btn-skeuo btn-clear text-sm py-2 px-4"
             >
-                Logout
+              <i className="fas fa-sign-out-alt mr-2"></i>Logout
             </button>
-        </div>
+          </div>
         <div className="p-6 sm:p-8">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Input Donasi Baru</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Dropdown Kelompok */}
-                <div>
-                    <label htmlFor="group" className="block text-sm font-medium text-gray-600 mb-1">Pilih Kelompok</label>
-                    <select
-                        id="group"
-                        value={selectedGroup}
-                        onChange={(e) => setSelectedGroup(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        required
-                    >
-                        <option value="" disabled>-- Pilih salah satu --</option>
-                        {groups.map((group) => (
-                            <option key={group.id} value={group.id}>{group.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Input Nominal */}
-                <div>
-                    <label htmlFor="amount" className="block text-sm font-medium text-gray-600 mb-1">Nominal Donasi (Rp)</label>
-                    <input
-                        type="number"
-                        id="amount"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="Contoh: 500000"
-                        required
-                    />
-                </div>
-            </div>
-
-            {/* Input Catatan */}
-            <div className="mt-6">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-600 mb-1">Catatan (Opsional)</label>
-                <textarea
-                    id="notes"
-                    rows={3}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Contoh: Donasi dari Hamba Allah"
-                ></textarea>
-            </div>
-
-            {/* Tombol Submit */}
-            <div className="mt-6 text-right">
+          {/* Form Tambah Kelompok */}
+          {showAddGroup && (
+            <div className="mb-6 panel p-4">
+              <h2 className="text-xl font-semibold text-yellow-300 mb-4">Tambah Kelompok Baru</h2>
+              <form onSubmit={handleAddGroup} className="flex gap-3">
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="Nama kelompok (contoh: Kelompok A - Masjid Al-Ikhlas)"
+                  className="flex-1 input-inset px-3 py-2"
+                  disabled={isLoading}
+                  required
+                />
                 <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-400"
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-skeuo bg-blue-600 text-white px-4 py-2 disabled:opacity-50"
                 >
-                    {isLoading ? 'Menyimpan...' : 'Simpan Donasi'}
+                  <i className="fas fa-plus mr-2"></i>{isLoading ? 'Menambah...' : 'Tambah'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddGroup(false)}
+                  className="btn-skeuo btn-clear px-4 py-2"
+                  disabled={isLoading}
+                >
+                  Batal
+                </button>
+              </form>
             </div>
+          )}
+          
+          {/* Tombol untuk menampilkan form tambah kelompok */}
+          {!showAddGroup && groups.length > 0 && (
+            <div className="mb-4">
+              <button
+                onClick={() => setShowAddGroup(true)}
+                className="btn-skeuo bg-green-600 text-white px-4 py-2 text-sm"
+              >
+                <i className="fas fa-plus mr-2"></i>Tambah Kelompok Baru
+              </button>
+            </div>
+          )}
+          
+          <h2 className="text-xl font-semibold text-yellow-300 mb-4">Input Donasi Baru</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="group" className="block text-sm font-medium text-yellow-200 mb-2">
+                Pilih Kelompok
+              </label>
+              <select
+                id="group"
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                required
+                className="w-full input-inset px-3 py-2"
+              >
+                <option value="">-- Pilih Kelompok --</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="amount" className="block text-sm font-medium text-yellow-200 mb-2">
+                Jumlah Donasi (Rp)
+              </label>
+              <input
+                type="number"
+                id="amount"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                required
+                className="w-full input-inset px-3 py-2"
+                placeholder="Masukkan jumlah donasi"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-yellow-200 mb-2">
+                Catatan (Opsional)
+              </label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full input-inset px-3 py-2 resize-none"
+                placeholder="Tambahkan catatan jika diperlukan"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-skeuo bg-blue-600 text-white font-semibold py-3 px-4 disabled:opacity-50"
+            >
+              <i className="fas fa-plus-circle mr-2"></i>
+              {isLoading ? 'Memproses...' : 'Tambah Donasi'}
+            </button>
           </form>
           {message && <p className="mt-4 text-center text-sm">{message}</p>}
+        </div>
         </div>
       </div>
     </div>

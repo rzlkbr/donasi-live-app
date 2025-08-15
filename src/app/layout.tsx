@@ -19,8 +19,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Aplikasi Donasi Live",
-  description: "Menampilkan progres donasi secara real-time.",
+  title: "Pelacak Donasi Real-time",
+  description: "Pantau donasi secara real-time dan transparan.",
 };
 
 export default function RootLayout({
@@ -29,7 +29,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="id">
+      <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+      </head>
       {/* Gabungkan variabel font ke dalam className */}
       <body className={`${amiri.variable} ${poppins.variable} ${poppins.className}`}>
         {children}

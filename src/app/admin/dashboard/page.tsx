@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -82,8 +82,13 @@ export default function DashboardPage() {
         throw new Error("Admin tidak terautentikasi. Silakan login kembali.");
       }
       
+      // Cari nama kelompok berdasarkan ID yang dipilih
+      const selectedGroupData = groups.find(group => group.id === selectedGroup);
+      const groupName = selectedGroupData ? selectedGroupData.name : 'Kelompok Tidak Diketahui';
+      
       const donationData = {
         groupId: selectedGroup,
+        groupName: groupName,
         amount: Number(amount),
         notes: notes || '',
         createdAt: serverTimestamp(),
@@ -97,6 +102,16 @@ export default function DashboardPage() {
       const docRef = await addDoc(collection(db, 'donations'), donationData);
       
       console.log('Donation added with ID:', docRef.id);
+      
+      // 4. Update totalDonations di dokumen group secara manual
+      const groupRef = doc(db, 'groups', selectedGroup);
+      await updateDoc(groupRef, {
+        totalDonations: increment(Number(amount)),
+        donationCount: increment(1),
+        lastUpdated: serverTimestamp()
+      });
+      
+      console.log('Group totalDonations updated successfully');
       setMessage(`Sukses! Donasi Rp ${Number(amount).toLocaleString('id-ID')} berhasil ditambahkan.`);
       
       // Reset form
@@ -131,6 +146,8 @@ export default function DashboardPage() {
       
       const groupData = {
         name: newGroupName.trim(),
+        totalDonations: 0,
+        donationCount: 0,
         createdAt: serverTimestamp(),
         createdBy: user.uid,
         createdByEmail: user.email

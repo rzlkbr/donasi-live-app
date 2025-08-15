@@ -1,6 +1,6 @@
 // Script untuk menambahkan data kelompok sample ke Firestore
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, addDoc } = require('firebase/firestore');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
 // Konfigurasi Firebase
 const firebaseConfig = {

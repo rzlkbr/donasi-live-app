@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { auth } from '../../../lib/firebase';
@@ -101,12 +102,12 @@ export default function LoginPage() {
         )}
 
         <div className="mt-6 text-center">
-          <a
+          <Link
             href="/"
             className="text-yellow-300 hover:text-yellow-200 text-sm transition-colors"
           >
             <i className="fas fa-arrow-left mr-2"></i>Kembali ke halaman utama
-          </a>
+          </Link>
         </div>
       </div>
     </div>

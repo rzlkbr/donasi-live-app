@@ -2,9 +2,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
-import { Group, Donator } from '../types';
+import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { Group } from '../types';
 import ShinyText from '../../Heading/ShinyText/ShinyText'; // Impor komponen ShinyText
 
 // Fungsi helper untuk format mata uang Rupiah
@@ -19,7 +20,13 @@ const formatRupiah = (amount: number) => {
 export default function Home() {
   // State untuk menyimpan data groups, donations dan status loading
   const [groups, setGroups] = useState<Group[]>([]);
-  const [donations, setDonations] = useState<any[]>([]);
+  const [donations, setDonations] = useState<{
+    id: string;
+    groupName: string;
+    amount: number;
+    notes?: string;
+    createdAt: Timestamp;
+  }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // --- LOGIKA REAL-TIME FETCHING ---
@@ -41,18 +48,37 @@ export default function Home() {
       querySnapshot.forEach((doc) => {
         groupsData.push({ id: doc.id, ...doc.data() } as Group);
       });
-      setGroups(groupsData); // Update state dengan data terbaru
-    });
+      console.log('Groups data loaded:', groupsData);
+       setGroups(groupsData); // Update state dengan data terbaru
+     }, (error) => {
+       console.error('Error fetching groups:', error);
+     });
     
     // onSnapshot untuk donations
     const unsubscribeDonations = onSnapshot(donationsQuery, (querySnapshot) => {
-      const donationsData: any[] = [];
+      const donationsData: {
+        id: string;
+        groupName: string;
+        amount: number;
+        notes?: string;
+        createdAt: Timestamp;
+      }[] = [];
       querySnapshot.forEach((doc) => {
-        donationsData.push({ id: doc.id, ...doc.data() }); 
+        donationsData.push({ id: doc.id, ...doc.data() } as {
+          id: string;
+          groupName: string;
+          amount: number;
+          notes?: string;
+          createdAt: Timestamp;
+        }); 
       });
-      setDonations(donationsData);
-      setIsLoading(false); // Matikan status loading setelah kedua data dimuat
-    });
+      console.log('Donations data loaded:', donationsData);
+       setDonations(donationsData);
+       setIsLoading(false); // Matikan status loading setelah kedua data dimuat
+     }, (error) => {
+       console.error('Error fetching donations:', error);
+       setIsLoading(false);
+     });
 
     // Cleanup function: Berhenti mendengarkan saat komponen dilepas
     // Ini sangat penting untuk mencegah memory leak
@@ -152,7 +178,7 @@ export default function Home() {
                     </span>
                     {donation.notes && (
                       <span className="text-xs text-yellow-200 italic mt-1">
-                        "{donation.notes}"
+                        &ldquo;{donation.notes}&rdquo;
                       </span>
                     )}
                   </div>
@@ -166,14 +192,14 @@ export default function Home() {
 
       {/* Admin Controls */}
       <div className="mt-8 text-center">
-        <a href="/admin/login" className="btn-skeuo bg-sky-700 text-yellow-100 px-6 py-2 text-lg inline-block no-underline font-semibold shadow-lg">
+        <Link href="/admin/login" className="btn-skeuo bg-sky-700 text-white px-6 py-2 text-lg inline-block no-underline font-semibold shadow-lg">
           <i className="fas fa-sign-in-alt mr-2"></i>Login Admin
-        </a>
+        </Link>
       </div>
 
       {/* Footer */}
       <footer className="text-center mt-12 pt-8 text-yellow-400" style={{ borderTop: '2px solid rgba(212, 175, 55, 0.2)' }}>
-        <p>&copy; {new Date().getFullYear()} - Aplikasi Donasi Live Balikpapan</p>
+        <p>© {new Date().getFullYear()} - Aplikasi Donasi Live Balikpapan</p>
         <p className="text-sm opacity-70">Data diperbarui secara real-time</p>
       </footer>
     </main>

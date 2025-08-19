@@ -1,10 +1,10 @@
 // File: app/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { Group } from '../types';
 // ShinyText component removed
 
@@ -15,6 +15,65 @@ const formatRupiah = (amount: number) => {
     currency: 'IDR',
     minimumFractionDigits: 0,
   }).format(amount);
+};
+
+// Komponen animasi decode text
+const DecodeText = ({ value, duration = 1000 }: { value: number; duration?: number }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const previousValueRef = useRef(value);
+
+  useEffect(() => {
+    if (value !== previousValueRef.current && value > previousValueRef.current) {
+      setIsAnimating(true);
+      const startValue = previousValueRef.current;
+      const endValue = value;
+      const startTime = Date.now();
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
+      intervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        if (progress < 1) {
+          // Animasi decode dengan karakter random
+          const currentValue = startValue + (endValue - startValue) * progress;
+          const randomOffset = Math.random() * 1000000;
+          setDisplayValue(Math.floor(currentValue + randomOffset));
+        } else {
+          setDisplayValue(endValue);
+          setIsAnimating(false);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        }
+      }, 50);
+      
+      previousValueRef.current = value;
+    } else if (value !== previousValueRef.current) {
+      setDisplayValue(value);
+      previousValueRef.current = value;
+    }
+  }, [value, duration]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <span className={`transition-all duration-300 ${isAnimating ? 'text-green-400' : 'text-white'}`}>
+      {formatRupiah(displayValue)}
+    </span>
+  );
 };
 
 export default function Home() {
@@ -28,9 +87,28 @@ export default function Home() {
     createdAt: Timestamp;
   }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [targetAmount, setTargetAmount] = useState(10000000);
+
+  // Fungsi untuk mengambil target dari Firestore
+  const fetchTarget = async () => {
+    try {
+      const configRef = doc(db, 'config', 'settings');
+      const configSnap = await getDoc(configRef);
+      
+      if (configSnap.exists() && configSnap.data().target) {
+        setTargetAmount(configSnap.data().target);
+      }
+    } catch (error) {
+      console.error('Error fetching target:', error);
+      // Gunakan default target jika gagal
+    }
+  };
 
   // --- LOGIKA REAL-TIME FETCHING ---
   useEffect(() => {
+    // Ambil target saat pertama kali load
+    fetchTarget();
+    
     // Query untuk mengambil data dari koleksi 'groups' dan mengurutkannya
     // berdasarkan totalDonasi secara descending (terbesar ke terkecil)
     const groupsQuery = query(collection(db, 'groups'), orderBy('totalDonations', 'desc'));
@@ -106,18 +184,18 @@ export default function Home() {
       {/* Main Display Panel */}
       <div className="panel p-6 md:p-8 my-8 text-center">
         <h1 className="text-2xl md:text-3xl text-yellow-300 tracking-wider font-bold">
-          Total Donasi: <span className="text-white text-4xl md:text-6xl font-extrabold block mt-2">{formatRupiah(totalDonation)}</span>
+          Total Donasi: <span className="text-4xl md:text-6xl font-extrabold block mt-2"><DecodeText value={totalDonation} duration={1500} /></span>
         </h1>
         {/* Progress Bar Section */}
         <div className="mt-6">
           <div className="flex justify-between items-end mb-1 text-yellow-200 font-semibold">
             <span className="text-lg">{formatRupiah(totalDonation)}</span>
-            <span className="text-lg">Target: {formatRupiah(10000000)}</span>
+            <span className="text-lg">Target: {formatRupiah(targetAmount)}</span>
           </div>
           <div className="progress-container w-full h-6">
             <div 
-              className="progress-bar h-full rounded-full" 
-              style={{ width: `${Math.min((totalDonation / 10000000) * 100, 100)}%` }}
+              className="progress-bar h-full rounded-full transition-all duration-1000 ease-out" 
+              style={{ width: `${Math.min((totalDonation / targetAmount) * 100, 100)}%` }}
             ></div>
           </div>
         </div>

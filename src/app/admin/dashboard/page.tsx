@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment, setDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -22,6 +22,11 @@ export default function DashboardPage() {
   const [message, setMessage] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [showAddGroup, setShowAddGroup] = useState(false);
+  const [targetAmount, setTargetAmount] = useState('');
+  const [displayTargetAmount, setDisplayTargetAmount] = useState('');
+  const [currentTarget, setCurrentTarget] = useState(10000000);
+  const [showTargetForm, setShowTargetForm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const router = useRouter();
 
   // Fungsi untuk format angka dengan titik satuan
@@ -42,31 +47,62 @@ export default function DashboardPage() {
      setDisplayAmount(formattedValue); // Simpan nilai terformat untuk display
    };
 
-  // 1. Ambil data semua kelompok dari Firestore saat halaman dimuat
-  useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        console.log('Fetching groups from Firestore...');
-        const querySnapshot = await getDocs(collection(db, 'groups'));
-        console.log('Groups query result:', querySnapshot.size, 'documents');
-        
-        const groupsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name,
-        }));
-        console.log('Groups data:', groupsData);
-        setGroups(groupsData);
-        
-        if (groupsData.length === 0) {
-           setMessage('Peringatan: Belum ada kelompok yang tersedia. Silakan tambahkan kelompok terlebih dahulu.');
-           setShowAddGroup(true);
-         }
-      } catch (error) {
-        console.error('Error fetching groups:', error);
-        setMessage('Error: Gagal memuat data kelompok.');
+  // Fungsi untuk handle perubahan input target amount
+  const handleTargetAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const numericValue = inputValue.replace(/\D/g, '');
+    const formattedValue = formatNumber(inputValue);
+    
+    setTargetAmount(numericValue);
+    setDisplayTargetAmount(formattedValue);
+  };
+
+  // Fungsi untuk mengambil data semua kelompok dari Firestore
+  const fetchGroups = async () => {
+    try {
+      console.log('Fetching groups from Firestore...');
+      const querySnapshot = await getDocs(collection(db, 'groups'));
+      console.log('Groups query result:', querySnapshot.size, 'documents');
+      
+      const groupsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+      }));
+      console.log('Groups data:', groupsData);
+      setGroups(groupsData);
+      
+      if (groupsData.length === 0) {
+         setMessage('Peringatan: Belum ada kelompok yang tersedia. Silakan tambahkan kelompok terlebih dahulu.');
+         setShowAddGroup(true);
+       }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      setMessage('Error: Gagal memuat data kelompok.');
+    }
+  };
+
+  // Fungsi untuk mengambil target saat ini dari Firestore
+  const fetchCurrentTarget = async () => {
+    try {
+      const configRef = doc(db, 'config', 'settings');
+      const configSnap = await getDocs(collection(db, 'config'));
+      
+      if (!configSnap.empty) {
+        const configDoc = configSnap.docs.find(doc => doc.id === 'settings');
+        if (configDoc && configDoc.data().target) {
+          setCurrentTarget(configDoc.data().target);
+        }
       }
-    };
+    } catch (error) {
+      console.error('Error fetching target:', error);
+      // Gunakan default target jika gagal
+    }
+  };
+
+  // 1. Ambil data semua kelompok dan target dari Firestore saat halaman dimuat
+  useEffect(() => {
     fetchGroups();
+    fetchCurrentTarget();
   }, []);
 
   // 2. Fungsi untuk handle submit form
@@ -195,6 +231,101 @@ export default function DashboardPage() {
     }
   };
 
+  // Fungsi untuk mengubah target donasi
+  const handleUpdateTarget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!targetAmount || Number(targetAmount) <= 0) {
+      setMessage('Error: Target donasi harus lebih dari 0.');
+      return;
+    }
+
+    if (!confirm(`Anda yakin ingin mengubah target donasi menjadi Rp ${Number(targetAmount).toLocaleString('id-ID')}?`)) {
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Admin tidak terautentikasi. Silakan login kembali.");
+      }
+
+      // Update target di collection config
+      const configRef = doc(db, 'config', 'settings');
+      await setDoc(configRef, {
+        target: Number(targetAmount),
+        updatedAt: serverTimestamp(),
+        updatedBy: user.uid,
+        updatedByEmail: user.email
+      }, { merge: true });
+
+      setCurrentTarget(Number(targetAmount));
+      setMessage(`Sukses! Target donasi berhasil diubah menjadi Rp ${Number(targetAmount).toLocaleString('id-ID')}.`);
+      setTargetAmount('');
+      setDisplayTargetAmount('');
+      setShowTargetForm(false);
+    } catch (error) {
+      console.error("Error updating target: ", error);
+      setMessage(`Gagal mengubah target: ${error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fungsi untuk mereset semua data donasi
+  const handleResetAllData = async () => {
+    if (!confirm('PERINGATAN: Anda akan menghapus SEMUA data donasi dan mereset total donasi semua kelompok ke 0. Tindakan ini TIDAK DAPAT DIBATALKAN. Apakah Anda yakin?')) {
+      return;
+    }
+
+    if (!confirm('Konfirmasi sekali lagi: Apakah Anda benar-benar yakin ingin menghapus SEMUA data donasi?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Admin tidak terautentikasi. Silakan login kembali.");
+      }
+
+      // Batch untuk menghapus semua donasi dan reset group totals
+      const batch = writeBatch(db);
+
+      // 1. Hapus semua donasi
+      const donationsSnapshot = await getDocs(collection(db, 'donations'));
+      donationsSnapshot.forEach((donationDoc) => {
+        batch.delete(donationDoc.ref);
+      });
+
+      // 2. Reset semua group totals
+      const groupsSnapshot = await getDocs(collection(db, 'groups'));
+      groupsSnapshot.forEach((groupDoc) => {
+        batch.update(groupDoc.ref, {
+          totalDonations: 0,
+          donationCount: 0,
+          lastUpdated: serverTimestamp()
+        });
+      });
+
+      // Commit batch
+      await batch.commit();
+
+      setMessage('Sukses! Semua data donasi telah dihapus dan total donasi kelompok telah direset ke 0.');
+      setShowResetConfirm(false);
+    } catch (error) {
+      console.error("Error resetting data: ", error);
+      setMessage(`Gagal mereset data: ${error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await auth.signOut();
     router.push('/admin/login');
@@ -214,6 +345,102 @@ export default function DashboardPage() {
             </button>
           </div>
         <div className="p-6 sm:p-8">
+          {/* Target Management Section */}
+          <div className="mb-6 panel p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-yellow-300">Manajemen Target</h2>
+                <p className="text-yellow-200">Target saat ini: Rp {currentTarget.toLocaleString('id-ID')}</p>
+              </div>
+              <button
+                onClick={() => setShowTargetForm(!showTargetForm)}
+                className="btn-skeuo bg-green-700 hover:bg-green-800 text-white px-4 py-2 shadow-lg"
+              >
+                {showTargetForm ? 'Tutup' : 'Ubah Target'}
+              </button>
+            </div>
+
+            {showTargetForm && (
+              <form onSubmit={handleUpdateTarget} className="space-y-4">
+                <div>
+                  <label htmlFor="targetAmount" className="block text-sm font-medium text-yellow-200 mb-2">
+                    Target Donasi Baru
+                  </label>
+                  <input
+                    type="text"
+                    id="targetAmount"
+                    value={displayTargetAmount}
+                    onChange={handleTargetAmountChange}
+                    placeholder="Masukkan target donasi baru"
+                    className="w-full input-inset px-3 py-2"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="btn-skeuo bg-green-700 hover:bg-green-800 text-white px-4 py-2 disabled:opacity-50 shadow-lg"
+                  >
+                    {isLoading ? 'Mengubah...' : 'Ubah Target'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTargetForm(false);
+                      setTargetAmount('');
+                      setDisplayTargetAmount('');
+                    }}
+                    className="btn-skeuo btn-clear px-4 py-2"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* Data Management Section */}
+          <div className="mb-6 panel p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-yellow-300">Manajemen Data</h2>
+                <p className="text-yellow-200 text-sm">Kelola data donasi dan kelompok</p>
+              </div>
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="btn-skeuo bg-red-700 hover:bg-red-800 text-white px-4 py-2 shadow-lg"
+              >
+                Reset Semua Data
+              </button>
+            </div>
+
+            {showResetConfirm && (
+              <div className="bg-red-900 bg-opacity-20 border border-red-500 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-red-300 mb-2">Konfirmasi Reset Data</h3>
+                <p className="text-red-200 mb-4">
+                  Tindakan ini akan menghapus SEMUA data donasi dan mereset total donasi semua kelompok ke 0. 
+                  Tindakan ini TIDAK DAPAT DIBATALKAN.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleResetAllData}
+                    disabled={isLoading}
+                    className="btn-skeuo bg-red-700 hover:bg-red-800 text-white px-4 py-2 disabled:opacity-50 shadow-lg"
+                  >
+                    {isLoading ? 'Mereset...' : 'Ya, Reset Semua Data'}
+                  </button>
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="btn-skeuo btn-clear px-4 py-2"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Form Tambah Kelompok */}
           {showAddGroup && (
             <div className="mb-6 panel p-4">

@@ -43,7 +43,7 @@ body {
 /* Skeuomorphic Button Styles */
 .btn-skeuo {
   font-weight: 700;
-  color: #E0C78F;
+  color: #1A0F08;
   background: linear-gradient(145deg, #FFD700, #DAA520);
   border: 1px solid #FFD700;
   border-radius: 0.75rem;

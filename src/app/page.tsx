@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { Group } from '../types';
-import ShinyText from '../../Heading/ShinyText/ShinyText'; // Impor komponen ShinyText
+// ShinyText component removed
 
 // Fungsi helper untuk format mata uang Rupiah
 const formatRupiah = (amount: number) => {
@@ -105,10 +105,9 @@ export default function Home() {
     <main className="w-full max-w-4xl mx-auto px-4 py-8">
       {/* Main Display Panel */}
       <div className="panel p-6 md:p-8 my-8 text-center">
-        <h1 className="text-2xl md:text-3xl text-yellow-300 tracking-wider font-bold">Total Donasi</h1>
-        <div className="total-amount-font text-6xl md:text-8xl my-4 transition-all duration-500">
-          <ShinyText text={formatRupiah(totalDonation)} />
-        </div>
+        <h1 className="text-2xl md:text-3xl text-yellow-300 tracking-wider font-bold">
+          Total Donasi: <span className="text-white text-4xl md:text-6xl font-extrabold block mt-2">{formatRupiah(totalDonation)}</span>
+        </h1>
         {/* Progress Bar Section */}
         <div className="mt-6">
           <div className="flex justify-between items-end mb-1 text-yellow-200 font-semibold">
@@ -192,8 +191,8 @@ export default function Home() {
 
       {/* Admin Controls */}
       <div className="mt-8 text-center">
-        <Link href="/admin/login" className="btn-skeuo bg-sky-700 text-white px-6 py-2 text-lg inline-block no-underline font-semibold shadow-lg">
-          <i className="fas fa-sign-in-alt mr-2"></i>Login Admin
+        <Link href="/admin/login" className="btn-skeuo bg-sky-700 text-green-300 px-6 py-2 text-lg inline-block no-underline font-semibold shadow-lg">
+          <i className="fas fa-sign-in-alt mr-2"></i>Admin Login
         </Link>
       </div>
 

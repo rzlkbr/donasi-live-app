@@ -16,12 +16,31 @@ export default function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [amount, setAmount] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [showAddGroup, setShowAddGroup] = useState(false);
   const router = useRouter();
+
+  // Fungsi untuk format angka dengan titik satuan
+  const formatNumber = (value: string) => {
+    // Hapus semua karakter non-digit
+    const numericValue = value.replace(/\D/g, '');
+    // Format dengan titik sebagai pemisah ribuan
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Fungsi untuk handle perubahan input amount
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const numericValue = inputValue.replace(/\D/g, '');
+    const formattedValue = formatNumber(inputValue);
+    
+    setAmount(numericValue); // Simpan nilai numerik untuk database
+     setDisplayAmount(formattedValue); // Simpan nilai terformat untuk display
+   };
 
   // 1. Ambil data semua kelompok dari Firestore saat halaman dimuat
   useEffect(() => {
@@ -117,6 +136,7 @@ export default function DashboardPage() {
       // Reset form
       setSelectedGroup('');
       setAmount('');
+      setDisplayAmount('');
       setNotes('');
     } catch (error) {
       console.error("Error adding donation: ", error);
@@ -211,7 +231,7 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-skeuo bg-blue-600 text-white px-4 py-2 disabled:opacity-50"
+                  className="btn-skeuo bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2 disabled:opacity-50 shadow-lg"
                 >
                   <i className="fas fa-plus mr-2"></i>{isLoading ? 'Menambah...' : 'Tambah'}
                 </button>
@@ -232,7 +252,7 @@ export default function DashboardPage() {
             <div className="mb-4">
               <button
                 onClick={() => setShowAddGroup(true)}
-                className="btn-skeuo bg-green-600 text-white px-4 py-2 text-sm"
+                className="btn-skeuo bg-green-700 hover:bg-green-800 text-white font-semibold px-4 py-2 text-sm shadow-lg"
               >
                 <i className="fas fa-plus mr-2"></i>Tambah Kelompok Baru
               </button>
@@ -266,14 +286,13 @@ export default function DashboardPage() {
                 Jumlah Donasi (Rp)
               </label>
               <input
-                type="number"
+                type="text"
                 id="amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
+                value={displayAmount}
+                onChange={handleAmountChange}
                 required
                 className="w-full input-inset px-3 py-2"
-                placeholder="Masukkan jumlah donasi"
+                placeholder="Masukkan jumlah donasi (contoh: 100.000)"
               />
             </div>
 
@@ -294,7 +313,7 @@ export default function DashboardPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-skeuo bg-blue-600 text-white font-semibold py-3 px-4 disabled:opacity-50"
+              className="w-full btn-skeuo bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 disabled:opacity-50 shadow-lg transition-colors"
             >
               <i className="fas fa-plus-circle mr-2"></i>
               {isLoading ? 'Memproses...' : 'Tambah Donasi'}

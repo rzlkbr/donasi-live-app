@@ -332,8 +332,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg">
+    <div className="min-h-screen p-8">
+      <div className="max-w-4xl mx-auto">
         <div className="panel p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-yellow-300">Dashboard Admin</h1>

@@ -180,7 +180,17 @@ export default function Home() {
   }
 
   return (
-    <main className="w-full max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen relative">
+      {/* Logo di pojok kiri atas */}
+      <div className="fixed top-4 left-4 z-50">
+        <img 
+          src="/logo-kkq.png" 
+          alt="Logo" 
+          className="h-20 w-auto opacity-100 hover:opacity-100 transition-opacity duration-300"
+        />
+      </div>
+      
+      <main className="w-full max-w-4xl mx-auto px-4 py-8">
       {/* Main Display Panel */}
       <div className="panel p-6 md:p-8 my-8 text-center">
         <h1 className="text-2xl md:text-3xl text-yellow-300 tracking-wider font-bold">
@@ -280,5 +290,6 @@ export default function Home() {
         <p className="text-sm opacity-70">Data diperbarui secara real-time</p>
       </footer>
     </main>
+    </div>
   );
 }
